@@ -16,6 +16,8 @@ import h5py
 from keras.utils.vis_utils import plot_model
 from sklearn.model_selection import KFold
 
+import json
+
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Conv2D
@@ -106,6 +108,9 @@ def get_model_v2(lx,ly,lz):
     model.add(Dense(512, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(43, activation='softmax'))
+    
+    plot_model(model, to_file='model_V2_plot.png', show_shapes=True, show_layer_names=True)
+    
     return model
 
 def get_model_v3(lx,ly,lz):
@@ -132,6 +137,9 @@ def get_model_v3(lx,ly,lz):
     model.add(Dropout(0.5))
 
     model.add(Dense(43, activation='softmax'))
+    
+    plot_model(model, to_file='model_V3_plot.png', show_shapes=True, show_layer_names=True)
+    
     return model
 
 # plot diagnostic learning curves
@@ -162,13 +170,26 @@ def summarize_performance(scores):
 enhanced_dir = './data/enhanced'
 final_dir = './data/final'
 
-dataset_name = 'set-24x24-RGB'
-batch_size = 64
+dataset_name = 'set-24x24-'
+batch_size = 32
 epochs = 5
 scale = 1
 
+# variables
+quality_label = ['RGB', 'RGB-HE', 'L', 'L-LHE']
+fn_models = [get_model_v0, get_model_v1, get_model_v2, get_model_v3]
+results = [
+    { 'accuracy': list(), 'std': list() },
+    { 'accuracy': list(), 'std': list() },
+    { 'accuracy': list(), 'std': list() },
+    { 'accuracy': list(), 'std': list() }
+]
+
+
+
+
 # ***** Evalution of the Model using Kfold *****
-def evaluate_model_kfold(dataX, dataY, fn_model, n_folds=5):
+def evaluate_model_kfold(dataX, dataY, fn_model, n_folds=3):
     scores, histories = list(), list()
     kfold = KFold(n_folds, shuffle=True, random_state=1)
     (n, lx, ly, lz) = dataX.shape
@@ -191,8 +212,9 @@ def evaluate_model_kfold(dataX, dataY, fn_model, n_folds=5):
         # keep track
         scores.append(accuracy)
         histories.append(history)
-    summarize_diagnostics(histories)
-    summarize_performance(scores)
+    return scores
+    # summarize_diagnostics(histories)
+    # summarize_performance(scores)
     
 
 def evaluate_model(dataX, dataY, testX, testY, fn_model):
@@ -213,21 +235,25 @@ def evaluate_model(dataX, dataY, testX, testY, fn_model):
 
 def run_model():
     # import the dataset
-    x_train, y_train, x_test,y_test, x_meta, y_meta = read_dataset(final_dir, dataset_name)
+    # x_train, y_train, x_test,y_test, x_meta, y_meta = read_dataset(enhanced_dir, dataset_name)
     # show example of data
     # pyplot.imshow(x_train[1], interpolation='nearest')
     # pyplot.show()
     
     # Evaluate with KFold
-    evaluate_model_kfold(x_train, y_train, get_model_v1)
+    for k in range(4):
+        for quality in quality_label:
+            x_train, y_train, x_test,y_test, x_meta, y_meta = read_dataset(enhanced_dir, f'{dataset_name}{quality}')
+            scores = evaluate_model_kfold(x_train, y_train, fn_models[k])
+            results[k]['accuracy'].append(mean(scores)*100)
+            results[k]['std'].append(std(scores)*100)
+            print('Model v%d: accuracy=%.3f , std=%.3f' % (k, mean(scores)*100, std(scores)*100))
     
+    with open('result.txt', 'w') as outfile:
+        json.dump(results, outfile)
+    # We save the result
     # Evaluate directly
-    # evaluate_model(x_train, y_train, x_test, y_test, get_model_v1)
-    
-
+    # evaluate_model(x_train, y_train, x_test, y_test, get_model_v0)
 
 run_model()
-
-
-
 
