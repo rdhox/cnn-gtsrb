@@ -49,6 +49,20 @@ def read_dataset(enhanced_dir, dataset_name):
 
 
 # ***** Declaring models *****
+def get_model_v0(lx, ly, lz):
+    model = Sequential()
+    
+    model.add(Conv2D(64, (3, 3), activation='relu', input_shape=(lx, ly, lz)))
+    model.add(MaxPool2D(2, 2))
+    
+    model.add(Flatten())
+    model.add(Dense(1000, activation='relu'))
+    model.add(Dense(43, activation='softmax'))
+    
+    plot_model(model, to_file='model_V0_plot.png', show_shapes=True, show_layer_names=True)
+    
+    return model
+    
 def get_model_v1(lx, ly, lz):
     model = Sequential()
     
