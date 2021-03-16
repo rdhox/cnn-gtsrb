@@ -96,19 +96,20 @@ def get_model_v2(lx,ly,lz):
 
 def get_model_v3(lx,ly,lz):
     model = Sequential()
-    model.add(Conv2D(32, (3,3),   activation='relu', input_shape=(lx,ly,lz)))
+    
+    model.add(Conv2D(32, (3,3), padding='same', activation='relu', input_shape=(lx,ly,lz)))
     model.add(MaxPool2D((2, 2)))
     model.add(Dropout(0.5))
 
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
     model.add(MaxPool2D((2, 2)))
     model.add(Dropout(0.5))
 
-    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
     model.add(MaxPool2D((2, 2)))
     model.add(Dropout(0.5))
 
-    model.add(Conv2D(256, (3, 3), activation='relu'))
+    model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
     model.add(MaxPool2D((2, 2)))
     model.add(Dropout(0.5))
 
@@ -147,7 +148,7 @@ def summarize_performance(scores):
 enhanced_dir = './data/enhanced'
 final_dir = './data/final'
 
-dataset_name = 'set-24x24-L'
+dataset_name = 'set-24x24-RGB'
 batch_size = 64
 epochs = 5
 scale = 1
@@ -155,7 +156,7 @@ scale = 1
 # ***** Evalution of the Model using Kfold *****
 def evaluate_model_kfold(dataX, dataY, fn_model, n_folds=5):
     scores, histories = list(), list()
-    kfold = KFold(n_folds, suffle=True, random_state=1)
+    kfold = KFold(n_folds, shuffle=True, random_state=1)
     (n, lx, ly, lz) = dataX.shape
     
     for train_ix, test_ix in kfold.split(dataX):
@@ -192,28 +193,26 @@ def evaluate_model(dataX, dataY, testX, testY, fn_model):
                       epochs          = epochs,
                       verbose         = 1,
                       validation_data = (testX, testY))
-    max_val_accuracy = np.amax(history.history["val_accuracy"])
-    print("Max validation accuracy is : {:.4f}".format(max_val_accuracy))
     score = model.evaluate(testX, testY, verbose=0)   
-    print('Test loss      : {:5.4f}'.format(score[0]))
-    print('Test accuracy  : {:5.4f}'.format(score[1]))
+    summarize_diagnostics([history])
+    summarize_performance([score])
 
 def run_model():
     # import the dataset
-    x_train, y_train, x_test,y_test, x_meta, y_meta = read_dataset(enhanced_dir, dataset_name)
+    x_train, y_train, x_test,y_test, x_meta, y_meta = read_dataset(final_dir, dataset_name)
     # show example of data
     # pyplot.imshow(x_train[1], interpolation='nearest')
     # pyplot.show()
     
     # Evaluate with KFold
-    # scores, histories = evaluate_model_kfold(x_train, y_train, get_model_v1)
+    evaluate_model_kfold(x_train, y_train, get_model_v1)
     
     # Evaluate directly
-    evaluate_model(x_train, y_train, x_test, y_test, get_model_v1)
+    # evaluate_model(x_train, y_train, x_test, y_test, get_model_v1)
     
 
 
-
+run_model()
 
 
 
